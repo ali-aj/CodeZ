@@ -21,21 +21,18 @@ export async function GET() {
 /**
  * POST /api/farmers
  * Create a new farmer
- * Check if a farmer with given username and cnic exists
  */
 export async function POST(request) {
   try {
     await dbConnect();
-    const { username, cnic } = await request.json();
+    const body = await request.json(); // parse JSON from request body
 
-    // Check if a farmer with the given username and cnic exists
-    const farmer = await Farmer.findOne({ username, cnic });
-    if (farmer) {
-      return NextResponse.json({ success: true, exists: true }, { status: 200 });
-    } else {
-      return NextResponse.json({ success: true, exists: false }, { status: 200 });
-    }
+    // Expect body to have { name, cnic, phone, location } at minimum
+    const newFarmer = await Farmer.create(body);
+
+    return NextResponse.json({ success: true, data: newFarmer }, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message }, { status: 400 });
   }
 }
+

@@ -17,22 +17,22 @@ export default function FarmerPage() {
   // Check if farmer already exists
   async function handleCheckFarmer(e) {
     e.preventDefault();
-
+  
     if (!name || !cnic) {
       alert("براہ کرم نام اور شناختی کارڈ نمبر درج کریں۔");
       return;
     }
-
+  
     try {
-      // Example GET request to check if farmer is registered
-      // Adjust your actual API endpoint as needed.
-      // e.g., /api/farmers/check?cnic=...
-      const response = await fetch(`/api/farmers/check?cnic=${cnic}`);
+      // Pass both name and cnic to the API.
+      // e.g., /api/farmers/check?name=XYZ&cnic=12345-6789012-3
+      const response = await fetch(
+        `/api/farmers/check?name=${encodeURIComponent(name)}&cnic=${encodeURIComponent(cnic)}`
+      );
       const data = await response.json();
-
+  
       if (data.success) {
         // If farmer is found, navigate to next page
-        // e.g., /farmer/dashboard
         router.push("/farmer/dashboard");
       } else {
         // If not found, go to step 2 to ask for phone
@@ -43,7 +43,7 @@ export default function FarmerPage() {
       alert("کوئی مسئلہ ہوا، دوبارہ کوشش کریں۔");
     }
   }
-
+  
   // Register new farmer if not found
   async function handleRegisterFarmer(e) {
     e.preventDefault();
