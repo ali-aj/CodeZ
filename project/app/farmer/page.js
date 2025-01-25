@@ -159,7 +159,7 @@ export default function FarmerPage() {
   useEffect(() => {
     if (step === 1 && !hasPlayedRef.current) {
       hasPlayedRef.current = true;
-      const textToSay = "اپنا نام اُردُو میں بتائیں";
+      const textToSay ="اپنا نام اُردُو میں بتائیں اس بٹن کو دبائیں اور جب آپ اپنا نام بول لیں تو اس بٹن کو چھوڑ دیں۔"
       fetch(
         `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
           textToSay
