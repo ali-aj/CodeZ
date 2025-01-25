@@ -8,7 +8,7 @@ export async function GET() {
     await dbConnect();
 
     // Fetch all crops from the database
-    const crops = await Crop.find({}).populate('farmer'); 
+    const crops = await Crop.find({}); 
     // .populate('farmer') will fetch the farmer details if needed
 
     return NextResponse.json(
