@@ -92,23 +92,26 @@ This project addresses the critical issue of exploitative middlemen in Pakistan'
 ### *Backend (Django)*
 
 1. *Change Directory:*
-    cd backend
+    - ``` cd backend ```
 
 2. *Install Dependencies:*
-   pip install -r requirements.txt   
+   - ``` pip install -r requirements.txt ```   
 
 3. *Run Migrations:*
-   python manage.py makemigrations
-   python manage.py migrate   
+   - ``` python manage.py makemigrations ```
+   - ``` python manage.py migrate ```   
 
 4. *Start the Server:*
-   python manage.py runserver
+   - ``` python manage.py runserver ```
    
 
 ### *Frontend (Next.js)*
 
-1. *Install Dependencies:*
-   npm install
+1. *Change directory:*
+   - ``` cd project ```
+
+2. *Install Dependencies:*
+   - ``` npm install ```
 
 3. *Run the Development Server:*
-   npm run dev
+   - ``` npm run dev ```
