@@ -17,9 +17,7 @@ export default function Home() {
         </div>
 
         <div className="p-8">
-          <p className="text-xl text-center text-gray-600 mb-8">
-            اپنے کردار کا انتخاب کریں اور ہمارے ای کامرس پلیٹ فارم پر شروع کریں
-          </p>
+          
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-6">
             <motion.button
