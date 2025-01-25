@@ -17,22 +17,24 @@ export default function FarmerPage() {
   // Check if farmer already exists
   async function handleCheckFarmer(e) {
     e.preventDefault();
-  
+
     if (!name || !cnic) {
       alert("براہ کرم نام اور شناختی کارڈ نمبر درج کریں۔");
       return;
     }
-  
+
     try {
-      // Pass both name and cnic to the API.
-      // e.g., /api/farmers/check?name=XYZ&cnic=12345-6789012-3
       const response = await fetch(
         `/api/farmers/check?name=${encodeURIComponent(name)}&cnic=${encodeURIComponent(cnic)}`
       );
       const data = await response.json();
-  
+
       if (data.success) {
-        // If farmer is found, navigate to next page
+        // If farmer is found, save ID locally
+        const farmerId = data.data._id; // or data.data.id, depending on how your doc is structured
+        localStorage.setItem("farmerId", farmerId);
+
+        // Navigate to the dashboard
         router.push("/farmer/dashboard");
       } else {
         // If not found, go to step 2 to ask for phone
@@ -43,7 +45,7 @@ export default function FarmerPage() {
       alert("کوئی مسئلہ ہوا، دوبارہ کوشش کریں۔");
     }
   }
-  
+
   // Register new farmer if not found
   async function handleRegisterFarmer(e) {
     e.preventDefault();
@@ -54,7 +56,6 @@ export default function FarmerPage() {
     }
 
     try {
-      // POST request to create new farmer
       const response = await fetch("/api/farmers", {
         method: "POST",
         headers: {
@@ -66,10 +67,14 @@ export default function FarmerPage() {
       const data = await response.json();
 
       if (data.success) {
-        // Registration successful, go to next page
+        // Registration successful, store ID locally
+        const farmerId = data.data._id;
+        localStorage.setItem("farmerId", farmerId);
+
+        // Go to dashboard
         router.push("/farmer/dashboard");
       } else {
-        alert("رجسٹریشن ناکام رہی۔ دوبارہ کوشش کریں۔");
+        alert(data.error || "رجسٹریشن ناکام رہی۔ دوبارہ کوشش کریں۔");
       }
     } catch (error) {
       console.error("Error registering farmer:", error);
