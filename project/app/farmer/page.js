@@ -218,7 +218,7 @@ export default function FarmerPage() {
             audioData: audioData.audioData,
             sampleRate: audioData.sampleRate,
             sampleWidth: audioData.sampleWidth,
-            lang: 'ur'
+            lang: 'en-US'
           })
         }
       );
