@@ -1,10 +1,38 @@
 "use client"
 import { useRouter } from "next/navigation"
-import Image from "next/image"
 import { motion } from "framer-motion"
+import { useEffect, useState } from "react"
 
 export default function Home() {
   const router = useRouter()
+  const [hasPlayed, setHasPlayed] = useState(false)
+
+  useEffect(() => {
+    // Check if audio has been played before
+    const audioPlayed = localStorage.getItem('welcomeAudioPlayed')
+    if (audioPlayed) return
+
+    const textToSay = "آپ کسان ہیں یا خریدار؟";
+    fetch(
+      `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
+        textToSay
+      )}&lang=ur`
+    )
+      .then((res) => res.blob())
+      .then((blob) => {
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        
+        // Play audio and handle success
+        audio.play().then(() => {
+          setHasPlayed(true)
+          localStorage.setItem('welcomeAudioPlayed', 'true')
+        }).catch((error) => {
+          console.log("Autoplay prevented:", error)
+        });
+      })
+      .catch((err) => console.error("Error fetching TTS audio:", err));
+  }, []);
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gradient-to-b from-green-50 to-green-100">
@@ -12,21 +40,18 @@ export default function Home() {
         <div className="relative h-64 bg-green-600">
           
           <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center">
-            <h1 className="text-4xl md:text-5xl font-bold text-white text-center px-4">کیا آپ کسان ہیں یا خریدار؟</h1>
+            <h1 className="text-4xl md:text-5xl font-bold text-white text-center px-4"> آپ کسان ہیں یا خریدار؟</h1>
           </div>
         </div>
 
         <div className="p-8">
-          <p className="text-xl text-center text-gray-600 mb-8">
-            اپنے کردار کا انتخاب کریں اور ہمارے ای کامرس پلیٹ فارم پر شروع کریں
-          </p>
 
           <div className="flex flex-col md:flex-row items-center justify-center gap-6">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => router.push("/farmer")}
-              className="w-full md:w-auto px-8 py-4 text-xl font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-300 transition-colors duration-300"
+              className="w-full md:w-auto px-8 py-4 text-xl font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300 transition-colors duration-300"
             >
               کسان
             </motion.button>
@@ -35,7 +60,7 @@ export default function Home() {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => router.push("/buyer/login")}
-              className="w-full md:w-auto px-8 py-4 text-xl font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300 transition-colors duration-300"
+              className="w-full md:w-auto px-8 py-4 text-xl font-semibold text-white bg-black rounded-md hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 transition-colors duration-300"
             >
               خریدار
             </motion.button>
@@ -51,4 +76,3 @@ export default function Home() {
     </main>
   )
 }
-
