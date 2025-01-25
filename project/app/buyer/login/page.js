@@ -19,14 +19,11 @@ export default function BuyerLoginPage() {
       const data = await res.json()
 
       if (data.success) {
-        alert("Login successful!")
         router.push("/buyer/dashboard")
       } else {
-        alert(data.error || "Invalid credentials")
       }
     } catch (error) {
       console.error("Login error:", error)
-      alert("An error occurred during login.")
     }
   }
 

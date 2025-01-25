@@ -159,7 +159,7 @@ export default function FarmerPage() {
   useEffect(() => {
     if (step === 1 && !hasPlayedRef.current) {
       hasPlayedRef.current = true;
-      const textToSay = "اپنا نام اُردُو میں بتائیں";
+      const textToSay = "اپنا نام اُردُو میں بتائیں اس بٹن کو دبائیں اور جب آپ اپنا نام بول لیں تو اس بٹن کو چھوڑ دیں۔"
       fetch(
         `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
           textToSay
@@ -180,7 +180,7 @@ export default function FarmerPage() {
 
   const handleRecordingComplete = async (audioData) => {
     setShowRecordingModal(false);
-    
+
     if (!audioData.audioData) {
       console.error("No audio data to send.");
       // Optionally, display an error message to the user
@@ -200,13 +200,13 @@ export default function FarmerPage() {
       }
       return;
     }
-  
+
     try {
       // Log the audio data for debugging
       console.log("Audio data:", audioData.audioData);
       // console.log("Sample rate:", audioData.sampleRate);
       // console.log("Sample width:", audioData.sampleWidth);
-  
+
       const response = await fetch(
         'http://127.0.0.1:8000/api/speech-to-text',
         {
@@ -218,28 +218,28 @@ export default function FarmerPage() {
             audioData: audioData.audioData,
             sampleRate: audioData.sampleRate,
             sampleWidth: audioData.sampleWidth,
-            lang: 'ur'
+            lang: 'en-US'
           })
         }
       );
-  
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
-  
+
       const data = await response.json();
       // console.log("API Response:", data);
-      
+
       if (data.error) {
         throw new Error(data.error);
       }
-  
+
       if (!data.text) {
         throw new Error("No text returned from speech recognition");
       }
-  
+
       setTempName(data.text);
-  
+
       // Play confirmation audio
       const confirmText = `کیا آپ کا نام ${data.text} ہے؟`;
       const confirmRes = await fetch(
@@ -253,7 +253,7 @@ export default function FarmerPage() {
       audio.play();
     } catch (err) {
       console.error("Error processing audio:", err);
-      
+
       // Play error message in Urdu
       const errorText = "آڈیو پروسیسنگ میں خرابی۔ دوبارہ کوشش کریں";
       try {
@@ -347,7 +347,7 @@ export default function FarmerPage() {
       }
     } catch (error) {
       console.error("Error registering farmer:", error);
-      alert("کوئی مسئلہ ہوا، دوبارہ کوشش کریں۔");
+
     }
   };
 
@@ -360,24 +360,33 @@ export default function FarmerPage() {
         {step === 1 && (
           <>
             {tempName === "" && (
-              <p className="mb-4">براہ کرم اپنا نام بولیں...</p>
+              <div className="flex justify-center items-center w-full">
+                <p className="mb-4 text-xl font-medium text-gray-800 text-center">
+                  براہ کرم اپنا نام بولیں
+                </p>
+              </div>
             )}
 
             {tempName && (
-              <div className="mb-4">
-                <p>کیا آپ کا نام یہی ہے؟: {tempName}</p>
-                <button
-                  onClick={() => handleConfirmName("yes")}
-                  className="inline-block mr-2 rounded bg-blue-600 px-4 py-2 text-white"
-                >
-                  ہاں
-                </button>
-                <button
-                  onClick={() => handleConfirmName("no")}
-                  className="inline-block rounded bg-gray-600 px-4 py-2 text-white"
-                >
-                  نہیں
-                </button>
+              <div className="flex flex-col items-center justify-center w-full p-6 mb-4 bg-white rounded-lg shadow-sm">
+                <p className="mb-6 text-xl font-medium text-gray-800 text-center">
+                  کیا آپ کا نام یہی ہے؟:{" "}
+                  <span className="font-bold text-blue-600">{tempName}</span>
+                </p>
+                <div className="flex gap-4 w-full max-w-[300px] justify-center">
+                  <button
+                    onClick={() => handleConfirmName("yes")}
+                    className="flex-1 px-6 py-3 text-lg font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors duration-200"
+                  >
+                    ہاں
+                  </button>
+                  <button
+                    onClick={() => handleConfirmName("no")}
+                    className="flex-1 px-6 py-3 text-lg font-medium text-white bg-black rounded-lg hover:bg-gray-700 transition-colors duration-200"
+                  >
+                    نہیں
+                  </button>
+                </div>
               </div>
             )}
 
@@ -411,7 +420,7 @@ export default function FarmerPage() {
 
                 <button
                   type="submit"
-                  className="w-full rounded bg-blue-600 px-4 py-2 font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
+                  className="w-full rounded bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-blue-300"
                 >
                   چیک کریں
                 </button>
