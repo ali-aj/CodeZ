@@ -1,15 +1,14 @@
-
 import { NextResponse } from 'next/server';
 import { dbConnect } from '../../lib/mongodb';
 import Crop from '../../models/Crop';
+import Farmer from '../../models/Farmer'; // Ensure Farmer model is imported
 
 export async function GET() {
   try {
     await dbConnect();
 
-    // Fetch all crops from the database
-    const crops = await Crop.find({}); 
-    // .populate('farmer') will fetch the farmer details if needed
+    // Fetch all crops and populate farmer details
+    const crops = await Crop.find({}).populate('farmer');
 
     return NextResponse.json(
       { success: true, data: crops },
@@ -30,7 +29,7 @@ export async function POST(request) {
     // Parse the incoming request body
     const { farmerId, cropName, quantity, pricePerKg } = await request.json();
 
-    // body should contain at least: farmer, cropName, quantity, price, etc.
+    // Create a new crop entry
     const newCrop = await Crop.create({
       farmer: farmerId, // store a reference to the Farmer model
       cropName,
