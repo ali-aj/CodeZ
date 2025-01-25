@@ -6,7 +6,7 @@ import Crop from '../../../../models/Crop.js';
 export async function GET(request, { params }) {
   try {
     await dbConnect();
-    const { id } = params; // farmer's ID
+    const { id } = await params; // farmer's ID
 
     // Find all crops belonging to this farmer
     const crops = await Crop.find({ farmer: id }).populate('farmer');

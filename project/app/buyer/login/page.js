@@ -22,7 +22,7 @@ export default function BuyerLoginPage() {
       if (data.success) {
         alert("Login successful!");
         // redirect or store user data in context, etc.
-        router.push("/"); // or wherever you want after login
+        router.push("/buyer/dashboard"); // or wherever you want after login
       } else {
         alert(data.error || "Invalid credentials");
       }
