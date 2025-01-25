@@ -7,21 +7,28 @@ const RecordingModal = ({ onComplete }) => {
   const [isRecording, setIsRecording] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const audioContextRef = useRef(null);
+  const scriptProcessorRef = useRef(null);
+  const recorderRef = useRef(null);
+  const rawAudioDataRef = useRef([]);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = recorder;
-      audioChunksRef.current = [];
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+      const input = audioContextRef.current.createMediaStreamSource(stream);
+      scriptProcessorRef.current = audioContextRef.current.createScriptProcessor(4096, 1, 1);
 
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
+      input.connect(scriptProcessorRef.current);
+      scriptProcessorRef.current.connect(audioContextRef.current.destination);
+
+      scriptProcessorRef.current.onaudioprocess = (e) => {
+        const channelData = e.inputBuffer.getChannelData(0);
+        rawAudioDataRef.current.push(new Float32Array(channelData));
       };
 
-      recorder.start();
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      mediaRecorderRef.current.start();
       setIsRecording(true);
     } catch (err) {
       console.error("Error starting recording:", err);
@@ -33,14 +40,82 @@ const RecordingModal = ({ onComplete }) => {
 
     mediaRecorderRef.current.stop();
     setIsRecording(false);
-    
-    mediaRecorderRef.current.onstop = () => {
-      const audioBlob = new Blob(audioChunksRef.current, { type: "audio/wav" });
-      onComplete(audioBlob);
+
+    mediaRecorderRef.current.onstop = async () => {
+      // Stop all audio nodes
+      scriptProcessorRef.current.disconnect();
+      audioContextRef.current.close();
+
+      // Convert raw audio data to WAV
+      const wavBuffer = encodeWAV(rawAudioDataRef.current, audioContextRef.current.sampleRate);
+      const audioBlob = new Blob([wavBuffer], { type: "audio/wav" });
+
+      // Convert blob to base64
+      const reader = new FileReader();
+      reader.readAsDataURL(audioBlob);
+      reader.onloadend = () => {
+        const base64Audio = reader.result.split(',')[1];
+        onComplete({
+          audioData: base64Audio,
+          sampleRate: audioContextRef.current.sampleRate,
+          sampleWidth: 2, // Typically 2 for 16-bit audio
+        });
+      };
     };
-    
-    // Stop all audio tracks
-    mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+
+    mediaRecorderRef.current.stream.getTracks().forEach((track) => track.stop());
+  };
+
+  // Function to encode raw audio data to WAV format
+  const encodeWAV = (channels, sampleRate) => {
+    const bufferLength = channels.reduce((acc, channel) => acc + channel.length, 0);
+    const buffer = new ArrayBuffer(44 + bufferLength * 2);
+    const view = new DataView(buffer);
+
+    /* RIFF identifier */
+    writeString(view, 0, 'RIFF');
+    /* file length */
+    view.setUint32(4, 36 + bufferLength * 2, true);
+    /* RIFF type */
+    writeString(view, 8, 'WAVE');
+    /* format chunk identifier */
+    writeString(view, 12, 'fmt ');
+    /* format chunk length */
+    view.setUint32(16, 16, true);
+    /* sample format (raw) */
+    view.setUint16(20, 1, true);
+    /* channel count */
+    view.setUint16(22, 1, true); // Mono
+    /* sample rate */
+    view.setUint32(24, sampleRate, true);
+    /* byte rate (sample rate * block align) */
+    view.setUint32(28, sampleRate * 2, true);
+    /* block align (channel count * bytes per sample) */
+    view.setUint16(32, 2, true);
+    /* bits per sample */
+    view.setUint16(34, 16, true);
+    /* data chunk identifier */
+    writeString(view, 36, 'data');
+    /* data chunk length */
+    view.setUint32(40, bufferLength * 2, true);
+
+    // Write the PCM samples
+    let offset = 44;
+    channels.forEach((channel) => {
+      for (let i = 0; i < channel.length; i++) {
+        const s = Math.max(-1, Math.min(1, channel[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
+    });
+
+    return view;
+  };
+
+  const writeString = (view, offset, string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
   };
 
   return (
@@ -103,33 +178,126 @@ export default function FarmerPage() {
     }
   }, [step]);
 
-  const handleRecordingComplete = async (audioBlob) => {
+  const handleRecordingComplete = async (audioData) => {
     setShowRecordingModal(false);
     
+    if (!audioData.audioData) {
+      console.error("No audio data to send.");
+      // Optionally, display an error message to the user
+      const errorText = "ریکارڈنگ میں کوئی آڈیو ڈیٹا نہیں ہوا۔ براہ کرم دوبارہ کوشش کریں۔";
+      try {
+        const errorRes = await fetch(
+          `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
+            errorText
+          )}&lang=ur`
+        );
+        const errorBlob = await errorRes.blob();
+        const audioUrl = URL.createObjectURL(errorBlob);
+        const audio = new Audio(audioUrl);
+        audio.play();
+      } catch (e) {
+        console.error("Error playing error message:", e);
+      }
+      return;
+    }
+  
     try {
-      const formData = new FormData();
-      formData.append("file", audioBlob);
-      const res = await fetch(
-        "https://6ywz12t8uf.execute-api.ap-south-1.amazonaws.com/default/SpeechToText",
+      // Log the audio data for debugging
+      console.log("Audio data:", audioData.audioData);
+      // console.log("Sample rate:", audioData.sampleRate);
+      // console.log("Sample width:", audioData.sampleWidth);
+  
+      const response = await fetch(
+        'http://127.0.0.1:8000/api/speech-to-text',
         {
-          method: "POST",
-          body: formData,
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            audioData: audioData.audioData,
+            sampleRate: audioData.sampleRate,
+            sampleWidth: audioData.sampleWidth,
+            lang: 'ur'
+          })
         }
       );
-      const { recognizedText } = await res.json();
-      setTempName(recognizedText || "");
+  
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+  
+      const data = await response.json();
+      // console.log("API Response:", data);
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+  
+      if (!data.text) {
+        throw new Error("No text returned from speech recognition");
+      }
+  
+      setTempName(data.text);
+  
+      // Play confirmation audio
+      const confirmText = `کیا آپ کا نام ${data.text} ہے؟`;
+      const confirmRes = await fetch(
+        `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
+          confirmText
+        )}&lang=ur`
+      );
+      const confirmBlob = await confirmRes.blob();
+      const audioUrl = URL.createObjectURL(confirmBlob);
+      const audio = new Audio(audioUrl);
+      audio.play();
     } catch (err) {
       console.error("Error processing audio:", err);
+      
+      // Play error message in Urdu
+      const errorText = "آڈیو پروسیسنگ میں خرابی۔ دوبارہ کوشش کریں";
+      try {
+        const errorRes = await fetch(
+          `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
+            errorText
+          )}&lang=ur`
+        );
+        const errorBlob = await errorRes.blob();
+        const audioUrl = URL.createObjectURL(errorBlob);
+        const audio = new Audio(audioUrl);
+        audio.play();
+        audio.onended = () => {
+          setShowRecordingModal(true); // Show recording modal again
+        };
+      } catch (e) {
+        console.error("Error playing error message:", e);
+      }
     }
   };
 
-  const handleConfirmName = (answer) => {
+  const handleConfirmName = async (answer) => {
     if (answer === "yes") {
       setName(tempName);
     } else {
       setTempName("");
-      // Optionally, you can restart the listening process
-      startAutoRecording();
+      // Play prompt again
+      const textToSay = "اپنا نام اُردُو میں بتائیں";
+      try {
+        const res = await fetch(
+          `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
+            textToSay
+          )}&lang=ur`
+        );
+        const blob = await res.blob();
+        const audioUrl = URL.createObjectURL(blob);
+        const audio = new Audio(audioUrl);
+        audio.play();
+        audio.onended = () => {
+          setShowRecordingModal(true);
+        };
+      } catch (err) {
+        console.error("Error fetching TTS audio:", err);
+      }
     }
   };
 
