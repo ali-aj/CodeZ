@@ -1,17 +1,17 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
 
 export default function BuyerSignupPage() {
-  const router = useRouter();
+  const router = useRouter()
 
   // Form fields
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
-  const [address, setAddress] = useState("");
-  const [password, setPassword] = useState("");
+  const [name, setName] = useState("")
+  const [phone, setPhone] = useState("")
+  const [email, setEmail] = useState("")
+  const [address, setAddress] = useState("")
+  const [password, setPassword] = useState("")
 
   // Handle form submit
   async function handleSignup(e) {
@@ -21,36 +21,36 @@ export default function BuyerSignupPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, phone, email, address, password }),
-      });
-      const data = await res.json();
+      })
+      const data = await res.json()
 
       if (data.success) {
-        alert("Signup successful!");
-        router.push("/buyer/login"); // redirect to login, or wherever you want
+        alert("Signup successful!")
+        router.push("/buyer/login")
       } else {
-        alert(data.error || "Signup failed!");
+        alert(data.error || "Signup failed!")
       }
     } catch (error) {
-      console.error("Signup error:", error);
-      alert("An error occurred during signup.");
+      console.error("Signup error:", error)
+      alert("An error occurred during signup.")
     }
   }
 
   return (
-    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-green-100 to-green-300 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-xl">
-        <h1 className="mb-6 text-center text-3xl font-bold text-green-700">
-          Buyer Signup
-        </h1>
-
-        <form onSubmit={handleSignup} className="space-y-5">
+    <main className="flex min-h-screen w-full flex-col items-center justify-center bg-gradient-to-br from-gray-800 to-black p-4">
+      <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl transition-all duration-300 ease-in-out hover:shadow-3xl">
+        <div className="bg-black p-6">
+          <h1 className="text-center text-3xl font-bold text-white">Buyer Signup</h1>
+        </div>
+        <form onSubmit={handleSignup} className="space-y-6 p-8">
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
+            <label htmlFor="name" className="mb-2 block text-sm font-medium text-gray-700">
               Name
             </label>
             <input
+              id="name"
               type="text"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-gray-700 transition-all duration-300 ease-in-out focus:border-black focus:outline-none focus:ring-2 focus:ring-gray-200"
               placeholder="Enter your full name"
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -59,12 +59,13 @@ export default function BuyerSignupPage() {
           </div>
 
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
+            <label htmlFor="phone" className="mb-2 block text-sm font-medium text-gray-700">
               Phone
             </label>
             <input
-              type="text"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
+              id="phone"
+              type="tel"
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-gray-700 transition-all duration-300 ease-in-out focus:border-black focus:outline-none focus:ring-2 focus:ring-gray-200"
               placeholder="e.g. 0300-1234567"
               value={phone}
               onChange={(e) => setPhone(e.target.value)}
@@ -73,12 +74,13 @@ export default function BuyerSignupPage() {
           </div>
 
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
+            <label htmlFor="email" className="mb-2 block text-sm font-medium text-gray-700">
               Email
             </label>
             <input
+              id="email"
               type="email"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-gray-700 transition-all duration-300 ease-in-out focus:border-black focus:outline-none focus:ring-2 focus:ring-gray-200"
               placeholder="you@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -87,12 +89,13 @@ export default function BuyerSignupPage() {
           </div>
 
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
+            <label htmlFor="address" className="mb-2 block text-sm font-medium text-gray-700">
               Address
             </label>
             <input
+              id="address"
               type="text"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-gray-700 transition-all duration-300 ease-in-out focus:border-black focus:outline-none focus:ring-2 focus:ring-gray-200"
               placeholder="e.g. Lahore, Punjab"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
@@ -100,12 +103,13 @@ export default function BuyerSignupPage() {
           </div>
 
           <div>
-            <label className="mb-1 block font-medium text-gray-700">
+            <label htmlFor="password" className="mb-2 block text-sm font-medium text-gray-700">
               Password
             </label>
             <input
+              id="password"
               type="password"
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-green-200"
+              className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2 text-gray-700 transition-all duration-300 ease-in-out focus:border-black focus:outline-none focus:ring-2 focus:ring-gray-200"
               placeholder="Choose a secure password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -115,22 +119,24 @@ export default function BuyerSignupPage() {
 
           <button
             type="submit"
-            className="w-full rounded-lg bg-green-600 px-4 py-2 text-white transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
+            className="w-full rounded-lg bg-black px-4 py-2 font-semibold text-white transition-all duration-300 ease-in-out hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
           >
             Sign Up
           </button>
         </form>
-
-        <p className="mt-4 text-center text-sm text-gray-600">
-          Already have an account?{" "}
-          <span
-            onClick={() => router.push("/buyer/login")}
-            className="cursor-pointer font-semibold text-green-700 hover:underline"
-          >
-            Login
-          </span>
-        </p>
+        <div className="bg-gray-50 p-4">
+          <p className="text-center text-sm text-gray-600">
+            Already have an account?{" "}
+            <span
+              onClick={() => router.push("/buyer/login")}
+              className="cursor-pointer font-semibold text-black transition-all duration-300 ease-in-out hover:text-gray-800"
+            >
+              Login
+            </span>
+          </p>
+        </div>
       </div>
     </main>
-  );
+  )
 }
+
