@@ -175,7 +175,7 @@ export default function FarmerPage() {
       if (data.success) {
         router.push("/farmer/dashboard");
       } else {
-        alert("رجسٹریشن ناکام رہی۔ دوبارہ کوشش کریں۔");
+        alert(data.error || "رجسٹریشن ناکام رہی۔ دوبارہ کوشش کریں۔");
       }
     } catch (error) {
       console.error("Error registering farmer:", error);

@@ -28,10 +28,15 @@ export async function POST(request) {
     await dbConnect();
 
     // Parse the incoming request body
-    const body = await request.json();
+    const { farmerId, cropName, quantity, pricePerKg } = await request.json();
 
     // body should contain at least: farmer, cropName, quantity, price, etc.
-    const newCrop = await Crop.create(body);
+    const newCrop = await Crop.create({
+      farmer: farmerId, // store a reference to the Farmer model
+      cropName,
+      quantity,
+      price: pricePerKg,
+    });
 
     return NextResponse.json(
       { success: true, data: newCrop },
