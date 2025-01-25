@@ -8,30 +8,35 @@ export default function Home() {
   const [hasPlayed, setHasPlayed] = useState(false)
 
   useEffect(() => {
-    // Check if audio has been played before
-    const audioPlayed = localStorage.getItem('welcomeAudioPlayed')
-    if (audioPlayed) return
-
     const textToSay = "آپ کسان ہیں یا خریدار؟";
-    fetch(
-      `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
-        textToSay
-      )}&lang=ur`
-    )
-      .then((res) => res.blob())
-      .then((blob) => {
-        const audioUrl = URL.createObjectURL(blob);
-        const audio = new Audio(audioUrl);
-        
-        // Play audio and handle success
-        audio.play().then(() => {
-          setHasPlayed(true)
-          localStorage.setItem('welcomeAudioPlayed', 'true')
-        }).catch((error) => {
+    let audio;
+
+    const playAudio = async () => {
+      try {
+        const res = await fetch(
+          `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(
+            textToSay
+          )}&lang=ur`
+        );
+        const blob = await res.blob();
+        audio = new Audio(URL.createObjectURL(blob));
+        await audio.play().catch((error) => {
           console.log("Autoplay prevented:", error)
         });
-      })
-      .catch((err) => console.error("Error fetching TTS audio:", err));
+      } catch (err) {
+        console.error("Error fetching TTS audio:", err);
+      }
+    };
+
+    playAudio();
+
+    // Cleanup function
+    return () => {
+      if (audio) {
+        audio.pause();
+        URL.revokeObjectURL(audio.src);
+      }
+    };
   }, []);
 
   return (

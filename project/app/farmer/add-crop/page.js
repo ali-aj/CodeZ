@@ -1,182 +1,283 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
+import { RecordingModal } from "../../components/RecordingModal";
+import { Button } from "../../components/ui/button";
+import { Card, CardContent } from "../../components/ui/card";
+import { Mic, Crop, Weight, CreditCard, Check, X } from "lucide-react";
+
+const cropAttributes = {
+  cropName: "فصل کا نام",
+  description: "فصل کی تفصیل",
+  quantity: "فصل کی مقدار",
+  price: "فی کلو قیمت",
+  location: "فصل کی جگہ"
+};
+
+const listenForResponse = () => {
+  return new Promise((resolve) => {
+    // Existing voice recognition logic
+    recognition.onresult = (event) => {
+      const response = event.results[0][0].transcript;
+      resolve(response);
+    };
+  });
+};
 
 export default function AddCropPage() {
   const router = useRouter();
-
-  // Wizard step (1 to 3)
+  const hasPlayedRef = useRef(false);
+  const [isStarted, setIsStarted] = useState(false);
   const [step, setStep] = useState(1);
+  const [showRecordingModal, setShowRecordingModal] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const audioRef = useRef(null);
 
-  // Form fields
+  // Form fields with temp values for confirmation
   const [cropName, setCropName] = useState("");
+  const [tempCropName, setTempCropName] = useState("");
   const [quantity, setQuantity] = useState("");
+  const [tempQuantity, setTempQuantity] = useState("");
   const [pricePerKg, setPricePerKg] = useState("");
+  const [tempPrice, setTempPrice] = useState("");
 
-  // Move to next step
-  const handleNext = (e) => {
-    e.preventDefault();
-    // Basic validation per step, if needed
-    if (step === 1 && !cropName) {
-      alert("براہ کرم فصل کا نام درج کریں۔");
-      return;
-    }
-    if (step === 2 && !quantity) {
-      alert("براہ کرم فصل کی مقدار درج کریں۔");
-      return;
-    }
-    // If we are on step 3, we'll submit instead of going to step 4
-    if (step === 3 && !pricePerKg) {
-      alert("براہ کرم ایک کلوگرام کی قیمت درج کریں۔");
-      return;
-    }
+  const startProcess = () => {
+    setIsStarted(true);
+    playStepPrompt();
+  };
 
-    if (step < 3) {
-      setStep(step + 1);
-    } else {
-      // If we're already on step 3, handle the final submission
-      handleSubmit();
+  const playStepPrompt = async () => {
+    const stepMessages = {
+      1: "اپنی فصل کا نام بتائیں",
+      2: "فصل کی مقدار کلوگرام میں بتائیں",
+      3: "ایک کلوگرام کی قیمت بتائیں",
+    };
+
+    await playVoicePrompt(stepMessages[step]);
+    setShowRecordingModal(true);
+  };
+
+  const playVoicePrompt = async (text, showModal = true) => {
+    try {
+      const res = await fetch(
+        `https://6vlnrk8kba.execute-api.ap-south-1.amazonaws.com/default/TextToSpeech?text=${encodeURIComponent(text)}&lang=ur`
+      );
+      const blob = await res.blob();
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+      audioRef.current = new Audio(URL.createObjectURL(blob));
+      await audioRef.current.play();
+      if (showModal) {
+        setShowRecordingModal(true);
+      }
+    } catch (err) {
+      console.error("Error playing prompt:", err);
     }
   };
 
-  // Move to previous step
-  const handleBack = (e) => {
-    e.preventDefault();
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        URL.revokeObjectURL(audioRef.current.src);
+      }
+    };
+  }, []);
 
-  // Final submission (on step 3)
-  const handleSubmit = async () => {
-    const farmerId = localStorage.getItem("farmerId");
+  const handleRecordingComplete = async (audioData) => {
+    setShowRecordingModal(false);
 
     try {
-      const bodyData = {
-        farmerId,
-        cropName,
-        quantity,
-        pricePerKg,
-      };
+      const response = await fetch("http://127.0.0.1:8000/api/speech-to-text", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audioData: audioData.audioData,
+          sampleRate: audioData.sampleRate,
+          sampleWidth: audioData.sampleWidth,
+          lang: "ur-PK",
+        }),
+      });
 
+      const data = await response.json();
+      setIsConfirming(true);
+
+      switch (step) {
+        case 1:
+          setTempCropName(data.text);
+          // First repeat what was heard without showing modal
+          await playVoicePrompt(data.text, false);
+          // Then ask for confirmation without showing modal
+          setTimeout(async () => {
+            await playVoicePrompt("کیا یہ درست ہے؟", false);
+          }, 1500);
+          break;
+        case 2:
+          setTempQuantity(data.text);
+          await playVoicePrompt(data.text, false);
+          setTimeout(async () => {
+            await playVoicePrompt("کیا یہ درست ہے؟", false);
+          }, 1500);
+          break;
+        case 3:
+          setTempPrice(data.text);
+          await playVoicePrompt(data.text, false);
+          setTimeout(async () => {
+            await playVoicePrompt("کیا یہ درست ہے؟", false);
+          }, 1500);
+          break;
+      }
+    } catch (err) {
+      console.error("Error processing audio:", err);
+      await playVoicePrompt("دوبارہ کوشش کریں");
+      setShowRecordingModal(true);
+    }
+  };
+
+  const handleConfirm = async (answer) => {
+    setIsConfirming(false);
+    if (answer === "yes") {
+      switch (step) {
+        case 1:
+          setCropName(tempCropName);
+          break;
+        case 2:
+          setQuantity(tempQuantity);
+          break;
+        case 3:
+          setPricePerKg(tempPrice);
+          handleSubmit();
+          return;
+      }
+      setStep(step + 1);
+      setTimeout(() => {
+        playStepPrompt();
+      }, 1000);
+    } else {
+      playStepPrompt();
+    }
+  };
+
+  const handleSubmit = async () => {
+    const farmerId = localStorage.getItem("farmerId");
+    try {
       const res = await fetch("/api/crop", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(bodyData),
+        body: JSON.stringify({
+          farmerId,
+          cropName,
+          quantity,
+          pricePerKg,
+        }),
       });
       const data = await res.json();
-
       if (data.success) {
-        alert("فصل کامیابی سے شامل ہوگئی!");
-        router.push("/farmer/dashboard"); // Go back to dashboard
-      } else {
-        alert(data.error || "فصل محفوظ کرنے میں مسئلہ ہوا۔");
+        await playVoicePrompt("آپ کی فصل کامیابی سے شامل کر دی گئی ہے");
+        router.push("/farmer/dashboard");
       }
     } catch (error) {
       console.error("Error adding crop:", error);
-      alert("کوئی مسئلہ ہوا، دوبارہ کوشش کریں۔");
+      await playVoicePrompt("کوئی مسئلہ ہوا، دوبارہ کوشش کریں");
+    }
+  };
+
+  const handleAttributeConfirmation = async (attribute, value) => {
+    const confirmationMessage = `کیا آپ نے کہا ${attribute} ہے ${value}؟`;
+    await playVoicePrompt(confirmationMessage);
+    
+    // Wait for voice response
+    const response = await listenForResponse();
+    
+    if (response.toLowerCase().includes('yes')) {
+      // Move to next attribute
+      const attributes = Object.keys(cropAttributes);
+      const currentIndex = attributes.indexOf(attribute);
+      
+      if (currentIndex < attributes.length - 1) {
+        const nextAttribute = attributes[currentIndex + 1];
+        await playVoicePrompt(cropAttributes[nextAttribute]);
+      } else {
+        // All attributes confirmed, submit form
+        handleSubmit();
+      }
+    } else {
+      // Ask for the same attribute again
+      await playVoicePrompt(cropAttributes[attribute]);
+    }
+  };
+
+  const renderStepIcon = () => {
+    switch (step) {
+      case 1:
+        return <Crop className="h-16 w-16 text-green-600" />;
+      case 2:
+        return <Weight className="h-16 w-16 text-blue-600" />;
+      case 3:
+        return <CreditCard className="h-16 w-16 text-purple-600" />;
+      default:
+        return null;
     }
   };
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center bg-gray-100 p-4">
-      <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-md">
-        <h2 className="mb-6 text-center text-2xl font-bold text-gray-800">
-          نئی فصل شامل کریں
-        </h2>
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-b from-green-50 to-green-100 p-4">
+      {!isStarted ? (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md"
+        >
+          <Button
+            onClick={startProcess}
+            className="w-full py-8 text-2xl font-bold bg-green-600 hover:bg-green-700"
+          >
+            فصل کی معلومات شامل کرنے کے لیے یہاں کلک کریں
+          </Button>
+        </motion.div>
+      ) : (
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            {showRecordingModal && <RecordingModal onComplete={handleRecordingComplete} />}
 
-        {/* Step 1: Crop Name */}
-        {step === 1 && (
-          <form className="space-y-4">
-            <label className="block font-medium text-gray-700">
-              فصل کا نام بتائیں
-            </label>
-            <input
-              type="text"
-              placeholder="مثال: گندم / دھان / مکئی"
-              value={cropName}
-              onChange={(e) => setCropName(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
-            />
-
-            <div className="flex items-center justify-between">
-              {/* No "Back" button on first step */}
-              <div />
-              <button
-                onClick={handleNext}
-                className="rounded bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
-              >
-                اگلا سوال
-              </button>
+            <div className="text-center">
+              {renderStepIcon()}
+              <h2 className="text-2xl font-bold mt-4 mb-6">
+                {step === 1 && "فصل کا نام"}
+                {step === 2 && "فصل کی مقدار"}
+                {step === 3 && "فصل کی قیمت"}
+              </h2>
+              {(tempCropName || tempQuantity || tempPrice) && (
+                <div className="mb-6">
+                  <p className="text-xl mb-4">
+                    {step === 1 && `کیا آپ کی فصل ${tempCropName} ہے؟`}
+                    {step === 2 && `کیا مقدار ${tempQuantity} کلوگرام ہے؟`}
+                    {step === 3 && `کیا قیمت ${tempPrice} روپے فی کلو ہے؟`}
+                  </p>
+                  <div className="flex justify-center space-x-4">
+                    <Button onClick={() => handleConfirm("yes")} className="w-1/2 py-6 text-xl font-bold" size="lg">
+                      <Check className="mr-2 h-6 w-6" />
+                      ہاں
+                    </Button>
+                    <Button
+                      onClick={() => handleConfirm("no")}
+                      className="w-1/2 py-6 text-xl font-bold"
+                      variant="destructive"
+                      size="lg"
+                    >
+                      <X className="mr-2 h-6 w-6" />
+                      نہیں
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
-          </form>
-        )}
-
-        {/* Step 2: Quantity */}
-        {step === 2 && (
-          <form className="space-y-4">
-            <label className="block font-medium text-gray-700">
-              فصل کی مقدار کلوگرام میں درج کریں
-            </label>
-            <input
-              type="number"
-              min="1"
-              placeholder="مثال: 100"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
-            />
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleBack}
-                className="rounded bg-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-              >
-                پچھلا سوال
-              </button>
-              <button
-                onClick={handleNext}
-                className="rounded bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
-              >
-                اگلا سوال
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Step 3: Price */}
-        {step === 3 && (
-          <form className="space-y-4">
-            <label className="block font-medium text-gray-700">
-              ایک کلوگرام کی قیمت بتائیں
-            </label>
-            <input
-              type="number"
-              min="1"
-              placeholder="مثال: 50 (روپے)"
-              value={pricePerKg}
-              onChange={(e) => setPricePerKg(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-green-300"
-            />
-
-            <div className="flex items-center justify-between">
-              <button
-                onClick={handleBack}
-                className="rounded bg-gray-300 px-4 py-2 font-semibold text-gray-700 hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200"
-              >
-                پچھلا سوال
-              </button>
-              <button
-                onClick={handleNext}
-                className="rounded bg-green-600 px-4 py-2 font-semibold text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
-              >
-                محفوظ کریں
-              </button>
-            </div>
-          </form>
-        )}
-      </div>
-    </main>
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
