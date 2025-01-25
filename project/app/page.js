@@ -20,7 +20,7 @@ export default function Home() {
 
         {/* Green Button: Buyer / خریدار */}
         <button
-          onClick={() => router.push("/buyer")}
+          onClick={() => router.push("/buyer/login")}
           className="px-8 py-4 text-xl font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-300"
         >
           خریدار
